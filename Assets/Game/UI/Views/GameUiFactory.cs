@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -9,6 +10,7 @@ namespace Kivancalp.UI.Views
         private static readonly Color BackgroundColor = new Color(0.96f, 0.80f, 0.44f, 1f);
         private static readonly Color PanelColor = new Color(1f, 1f, 1f, 0.12f);
         private static readonly Color BoardColor = new Color(1f, 1f, 1f, 0.08f);
+        private const string InputSystemUiModuleTypeName = "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem";
         private const string BuiltinFontName = "LegacyRuntime.ttf";
 
         public static GameUiContext Create(Transform parent)
@@ -79,13 +81,45 @@ namespace Kivancalp.UI.Views
 
         private static void CreateEventSystemIfNeeded()
         {
-            if (EventSystem.current != null)
+            EventSystem current = EventSystem.current;
+
+            if (current != null)
             {
+                EnsureInputModule(current.gameObject);
                 return;
             }
 
-            var eventSystemObject = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Object.DontDestroyOnLoad(eventSystemObject);
+            var eventSystemObject = new GameObject("EventSystem", typeof(EventSystem));
+            EnsureInputModule(eventSystemObject);
+            UnityEngine.Object.DontDestroyOnLoad(eventSystemObject);
+        }
+
+        private static void EnsureInputModule(GameObject eventSystemObject)
+        {
+#if ENABLE_INPUT_SYSTEM
+            StandaloneInputModule standaloneInputModule = eventSystemObject.GetComponent<StandaloneInputModule>();
+
+            if (standaloneInputModule != null)
+            {
+                standaloneInputModule.enabled = false;
+                UnityEngine.Object.Destroy(standaloneInputModule);
+            }
+
+            Type inputSystemUiModuleType = Type.GetType(InputSystemUiModuleTypeName);
+
+            if (inputSystemUiModuleType != null)
+            {
+                if (eventSystemObject.GetComponent(inputSystemUiModuleType) == null)
+                {
+                    eventSystemObject.AddComponent(inputSystemUiModuleType);
+                }
+            }
+#else
+            if (eventSystemObject.GetComponent<StandaloneInputModule>() == null)
+            {
+                eventSystemObject.AddComponent<StandaloneInputModule>();
+            }
+#endif
         }
 
         private static RectTransform CreatePanel(string name, RectTransform parent, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
