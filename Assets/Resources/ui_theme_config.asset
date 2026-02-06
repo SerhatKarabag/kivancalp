@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ecad6e6974b4f72aa3229f722851cbd, type: 3}
+  m_Name: ui_theme_config
+  m_EditorClassIdentifier: 
+  palette:
+    backgroundColor: {r: 0.84, g: 0.89, b: 0.94, a: 1}
+    boardFrameColor: {r: 1, g: 1, b: 1, a: 0.14}
+    bottomPanelColor: {r: 1, g: 1, b: 1, a: 0.2}
+    chipColor: {r: 0.1, g: 0.19, b: 0.34, a: 0.12}
+    boardContainerColor: {r: 0.09, g: 0.16, b: 0.33, a: 0.1}
+    topBandColor: {r: 1, g: 1, b: 1, a: 0.08}
+    bottomBandColor: {r: 1, g: 1, b: 1, a: 0.06}
+    boardHeaderColor: {r: 0.06, g: 0.15, b: 0.31, a: 0.2}
+    actionButtonColor: {r: 0.12, g: 0.29, b: 0.61, a: 0.96}
+    actionButtonHighlightedColor: {r: 0.16, g: 0.36, b: 0.7, a: 1}
+    actionButtonPressedColor: {r: 0.08, g: 0.23, b: 0.5, a: 1}
+    actionButtonDisabledColor: {r: 0.34, g: 0.42, b: 0.56, a: 0.7}
+    buttonLabelColor: {r: 1, g: 1, b: 1, a: 1}
+    labelTextColor: {r: 0.11, g: 0.16, b: 0.26, a: 1}
+    whiteOutlineColor: {r: 1, g: 1, b: 1, a: 0.16}
+    whiteOutlineSoftColor: {r: 1, g: 1, b: 1, a: 0.12}
+  layout:
+    safeAreaMargin: 16
+    safeAreaSpacing: 12
+    sectionInset: 14
+    bottomSectionVerticalInset: 12
+    bottomPanelHeight: 92
+    boardHeaderTopOffset: 10
+    boardHeaderHeight: 96
+    boardHeaderVerticalSpacing: 6
+    boardHeaderRowSpacing: 8
+    boardContainerBottomInset: 14
+    boardContainerTopPadding: 20
+    headerChipHorizontalPadding: 12
+    headerChipVerticalPadding: 3
+    bottomRowSpacing: 12
+    topBandStartY: 0.72
+    bottomBandEndY: 0.24
+    chipMinWidthRatio: 0.6
+    buttonMinWidth: 90
+    buttonPreferredWidth: 220
+    buttonLabelHorizontalPadding: 10
+    buttonLabelVerticalPadding: 4
+    scoreChipPreferredWidth: 230
+    layoutChipPreferredWidth: 170
+    statusChipPreferredWidth: 180
+    turnsChipPreferredWidth: 180
+    matchesChipPreferredWidth: 210
+    comboChipPreferredWidth: 180
+  typography:
+    headerTextSize: 28
+    secondaryTextSize: 23
+    textBestFitMinSize: 10
+    buttonTextBestFitMinSize: 12
+    buttonTextBestFitMaxSize: 24
+    labelFontStyle: 1
+  labels:
+    previousLayoutButtonLabel: Layout -
+    nextLayoutButtonLabel: Layout +
+    newGameButtonLabel: New Game
+  hudLabels:
+    scorePrefix: 'Score: '
+    turnsPrefix: 'Turns: '
+    matchesPrefix: 'Matches: '
+    comboPrefix: 'Combo: '
+    layoutPrefix: 'Layout: '
+    completedStatus: Completed
+  card:
+    baseSize: {x: 120, y: 160}
+    backColor: {r: 0.11, g: 0.25, b: 0.7, a: 1}
+    backInnerColor: {r: 0.16, g: 0.33, b: 0.84, a: 1}
+    matchedColor: {r: 0.3, g: 0.63, b: 0.27, a: 1}
+    matchedOverlayColor: {r: 0.93, g: 1, b: 0.93, a: 0.25}
+    hoverOverlayColor: {r: 1, g: 1, b: 1, a: 0.12}
+    shadowColor: {r: 0, g: 0, b: 0, a: 0.22}
+    shadowOffset: {x: 4, y: -4}
+    outlineColor: {r: 1, g: 1, b: 1, a: 0.18}
+    outlineOffset: {x: 1, y: -1}
+    innerPadding: 6
+    backStripeColor: {r: 1, g: 0.9, b: 0.2, a: 0.58}
+    backStripeCount: 4
+    backStripeStartY: 0.18
+    backStripeStep: 0.2
+    backStripeHeight: 0.08
+    topShineColor: {r: 1, g: 1, b: 1, a: 0.2}
+    topShineStartY: 0.56
+    frontTintAmount: 0.14
+    matchedTintAmount: 0.18
+    labelColor: {r: 0.08, g: 0.1, b: 0.14, a: 1}
+    matchedLabelColor: {r: 0.06, g: 0.17, b: 0.05, a: 1}
+    labelFontSize: 42
+    labelBestFitMinSize: 14
+    labelBestFitMaxSize: 48
+    faceColors:
+    - {r: 0.93, g: 0.33, b: 0.3, a: 1}
+    - {r: 0.95, g: 0.49, b: 0.18, a: 1}
+    - {r: 0.96, g: 0.74, b: 0.2, a: 1}
+    - {r: 0.84, g: 0.28, b: 0.52, a: 1}
+    - {r: 0.66, g: 0.31, b: 0.82, a: 1}
+    - {r: 0.3, g: 0.44, b: 0.88, a: 1}
+    - {r: 0.21, g: 0.58, b: 0.88, a: 1}
+    - {r: 0.51, g: 0.36, b: 0.82, a: 1}
+    - {r: 0.72, g: 0.42, b: 0.27, a: 1}
+    - {r: 0.56, g: 0.49, b: 0.44, a: 1}
+    - {r: 0.8, g: 0.35, b: 0.37, a: 1}
+    - {r: 0.4, g: 0.34, b: 0.64, a: 1}
+    - {r: 0.83, g: 0.57, b: 0.23, a: 1}
+    - {r: 0.22, g: 0.46, b: 0.77, a: 1}
+    - {r: 0.62, g: 0.32, b: 0.68, a: 1}

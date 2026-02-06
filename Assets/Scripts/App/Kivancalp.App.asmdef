@@ -1,0 +1,19 @@
+{
+  "name": "Kivancalp.App",
+  "rootNamespace": "Kivancalp.App",
+  "references": [
+    "Kivancalp.Core",
+    "Kivancalp.Gameplay",
+    "Kivancalp.Infrastructure",
+    "Kivancalp.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

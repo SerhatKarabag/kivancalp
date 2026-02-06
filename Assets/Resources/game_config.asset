@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8fba6a171b64138a2ced18d3531f922, type: 3}
+  m_Name: game_config
+  m_EditorClassIdentifier: 
+  defaultLayoutId: 3
+  layouts:
+  - id: 0
+    name: 2x2
+    rows: 2
+    columns: 2
+    spacing: 16
+    padding: 24
+  - id: 1
+    name: 2x3
+    rows: 2
+    columns: 3
+    spacing: 16
+    padding: 24
+  - id: 2
+    name: 2x4
+    rows: 2
+    columns: 4
+    spacing: 16
+    padding: 24
+  - id: 3
+    name: 3x4
+    rows: 3
+    columns: 4
+    spacing: 16
+    padding: 24
+  - id: 4
+    name: 4x4
+    rows: 4
+    columns: 4
+    spacing: 14
+    padding: 20
+  - id: 5
+    name: 4x5
+    rows: 4
+    columns: 5
+    spacing: 14
+    padding: 20
+  - id: 6
+    name: 4x6
+    rows: 4
+    columns: 6
+    spacing: 12
+    padding: 20
+  - id: 7
+    name: 5x6
+    rows: 5
+    columns: 6
+    spacing: 12
+    padding: 20
+  score:
+    matchScore: 100
+    mismatchPenalty: 25
+    comboBonusStep: 15
+  flipDurationSeconds: 0.16
+  compareDelaySeconds: 0.1
+  mismatchRevealSeconds: 0.45
+  saveDebounceSeconds: 0.2
+  randomSeed: 20260206
