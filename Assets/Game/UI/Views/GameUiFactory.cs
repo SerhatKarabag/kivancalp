@@ -9,10 +9,11 @@ namespace Kivancalp.UI.Views
         private static readonly Color BackgroundColor = new Color(0.96f, 0.80f, 0.44f, 1f);
         private static readonly Color PanelColor = new Color(1f, 1f, 1f, 0.12f);
         private static readonly Color BoardColor = new Color(1f, 1f, 1f, 0.08f);
+        private const string BuiltinFontName = "LegacyRuntime.ttf";
 
         public static GameUiContext Create(Transform parent)
         {
-            Font uiFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font uiFont = Resources.GetBuiltinResource<Font>(BuiltinFontName);
             GameObject rootObject = CreateUiRoot(parent);
             CreateEventSystemIfNeeded();
 
