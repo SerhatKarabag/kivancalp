@@ -19,6 +19,46 @@
     },
     {
       "id": 2,
+      "name": "2x4",
+      "rows": 2,
+      "columns": 4,
+      "spacing": 16.0,
+      "padding": 24.0
+    },
+    {
+      "id": 3,
+      "name": "3x4",
+      "rows": 3,
+      "columns": 4,
+      "spacing": 16.0,
+      "padding": 24.0
+    },
+    {
+      "id": 4,
+      "name": "4x4",
+      "rows": 4,
+      "columns": 4,
+      "spacing": 14.0,
+      "padding": 20.0
+    },
+    {
+      "id": 5,
+      "name": "4x5",
+      "rows": 4,
+      "columns": 5,
+      "spacing": 14.0,
+      "padding": 20.0
+    },
+    {
+      "id": 6,
+      "name": "4x6",
+      "rows": 4,
+      "columns": 6,
+      "spacing": 12.0,
+      "padding": 20.0
+    },
+    {
+      "id": 7,
       "name": "5x6",
       "rows": 5,
       "columns": 6,
