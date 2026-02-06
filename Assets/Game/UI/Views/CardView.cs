@@ -13,21 +13,21 @@ namespace Kivancalp.UI.Views
 
         private static readonly Color[] FaceColors =
         {
-            new Color(0.96f, 0.42f, 0.29f, 1f),
-            new Color(0.99f, 0.69f, 0.24f, 1f),
-            new Color(0.96f, 0.88f, 0.24f, 1f),
-            new Color(0.34f, 0.71f, 0.31f, 1f),
-            new Color(0.23f, 0.72f, 0.81f, 1f),
-            new Color(0.24f, 0.54f, 0.88f, 1f),
-            new Color(0.56f, 0.46f, 0.86f, 1f),
-            new Color(0.88f, 0.40f, 0.72f, 1f),
-            new Color(0.65f, 0.43f, 0.33f, 1f),
-            new Color(0.45f, 0.58f, 0.63f, 1f),
-            new Color(0.78f, 0.32f, 0.36f, 1f),
-            new Color(0.44f, 0.31f, 0.63f, 1f),
-            new Color(0.27f, 0.59f, 0.41f, 1f),
-            new Color(0.83f, 0.56f, 0.18f, 1f),
-            new Color(0.20f, 0.44f, 0.75f, 1f),
+            new Color(0.93f, 0.33f, 0.30f, 1f),
+            new Color(0.95f, 0.49f, 0.18f, 1f),
+            new Color(0.96f, 0.74f, 0.20f, 1f),
+            new Color(0.84f, 0.28f, 0.52f, 1f),
+            new Color(0.66f, 0.31f, 0.82f, 1f),
+            new Color(0.30f, 0.44f, 0.88f, 1f),
+            new Color(0.21f, 0.58f, 0.88f, 1f),
+            new Color(0.51f, 0.36f, 0.82f, 1f),
+            new Color(0.72f, 0.42f, 0.27f, 1f),
+            new Color(0.56f, 0.49f, 0.44f, 1f),
+            new Color(0.80f, 0.35f, 0.37f, 1f),
+            new Color(0.40f, 0.34f, 0.64f, 1f),
+            new Color(0.83f, 0.57f, 0.23f, 1f),
+            new Color(0.22f, 0.46f, 0.77f, 1f),
+            new Color(0.62f, 0.32f, 0.68f, 1f),
         };
 
         private RectTransform _rectTransform;
