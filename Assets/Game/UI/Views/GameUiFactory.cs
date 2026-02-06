@@ -37,12 +37,13 @@ namespace Kivancalp.UI.Views
             RectTransform boardPanel = CreatePanel("BoardPanel", rootRect, BoardColor, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(16f, 110f), new Vector2(-16f, -156f));
             RectTransform bottomPanel = CreatePanel("BottomPanel", rootRect, PanelColor, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(12f, 12f), new Vector2(-12f, 100f));
 
-            Text scoreText = CreateTextValue("Score", topPanel, uiFont, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -70f), new Vector2(220f, -20f));
-            Text turnsText = CreateTextValue("Turns", topPanel, uiFont, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(240f, -70f), new Vector2(460f, -20f));
-            Text matchesText = CreateTextValue("Matches", topPanel, uiFont, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(480f, -70f), new Vector2(740f, -20f));
-            Text comboText = CreateTextValue("Combo", topPanel, uiFont, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(760f, -70f), new Vector2(1020f, -20f));
-            Text layoutText = CreateTextValue("Layout", topPanel, uiFont, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(1040f, -70f), new Vector2(1260f, -20f));
-            Text statusText = CreateText("Status", topPanel, uiFont, 32, TextAnchor.MiddleRight, Color.black, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1280f, -70f), new Vector2(-20f, -20f));
+            RectTransform topRow = CreateTopRow(topPanel);
+            Text scoreText = CreateTopRowText("ScoreText", topRow, uiFont, "Score: 0", TextAnchor.MiddleLeft, 140f, 1f);
+            Text turnsText = CreateTopRowText("TurnsText", topRow, uiFont, "Turns: 0", TextAnchor.MiddleLeft, 140f, 1f);
+            Text matchesText = CreateTopRowText("MatchesText", topRow, uiFont, "Matches: 0", TextAnchor.MiddleLeft, 180f, 1.2f);
+            Text comboText = CreateTopRowText("ComboText", topRow, uiFont, "Combo: 0", TextAnchor.MiddleLeft, 140f, 1f);
+            Text layoutText = CreateTopRowText("LayoutText", topRow, uiFont, "Layout: 0", TextAnchor.MiddleLeft, 150f, 1f);
+            Text statusText = CreateTopRowText("StatusText", topRow, uiFont, string.Empty, TextAnchor.MiddleRight, 140f, 1.2f);
 
             Button previousLayoutButton = CreateButton("PrevLayoutButton", bottomPanel, uiFont, "Layout -", new Vector2(20f, 20f), new Vector2(200f, 70f));
             Button nextLayoutButton = CreateButton("NextLayoutButton", bottomPanel, uiFont, "Layout +", new Vector2(220f, 20f), new Vector2(400f, 70f));
@@ -133,6 +134,27 @@ namespace Kivancalp.UI.Views
             return panelRect;
         }
 
+        private static RectTransform CreateTopRow(RectTransform parent)
+        {
+            GameObject rowObject = new GameObject("TopRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            RectTransform rowRect = rowObject.GetComponent<RectTransform>();
+            rowRect.SetParent(parent, false);
+            rowRect.anchorMin = Vector2.zero;
+            rowRect.anchorMax = Vector2.one;
+            rowRect.offsetMin = new Vector2(20f, 20f);
+            rowRect.offsetMax = new Vector2(-20f, -20f);
+
+            HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
+            layoutGroup.padding = new RectOffset(0, 0, 0, 0);
+            layoutGroup.spacing = 16f;
+            layoutGroup.childAlignment = TextAnchor.MiddleLeft;
+            layoutGroup.childControlWidth = true;
+            layoutGroup.childControlHeight = true;
+            layoutGroup.childForceExpandWidth = false;
+            layoutGroup.childForceExpandHeight = true;
+            return rowRect;
+        }
+
         private static Image CreateFullscreenImage(string name, RectTransform parent, Color color)
         {
             GameObject imageObject = new GameObject(name, typeof(RectTransform), typeof(Image));
@@ -146,6 +168,25 @@ namespace Kivancalp.UI.Views
             Image image = imageObject.GetComponent<Image>();
             image.color = color;
             return image;
+        }
+
+        private static Text CreateTopRowText(string name, RectTransform parent, Font font, string initialText, TextAnchor alignment, float minWidth, float flexibleWidth)
+        {
+            GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(LayoutElement), typeof(Text));
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.SetParent(parent, false);
+
+            LayoutElement layoutElement = textObject.GetComponent<LayoutElement>();
+            layoutElement.minWidth = minWidth;
+            layoutElement.flexibleWidth = flexibleWidth;
+
+            Text text = textObject.GetComponent<Text>();
+            text.font = font;
+            text.fontSize = 28;
+            text.alignment = alignment;
+            text.color = Color.black;
+            text.text = initialText;
+            return text;
         }
 
         private static Text CreateTextValue(string label, RectTransform parent, Font font, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
