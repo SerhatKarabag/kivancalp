@@ -3,7 +3,6 @@ using Kivancalp.Gameplay.Application;
 using Kivancalp.Gameplay.Contracts;
 using Kivancalp.Gameplay.Domain;
 using Kivancalp.UI.Views;
-using UnityEngine;
 
 namespace Kivancalp.UI.Presentation
 {
@@ -33,8 +32,6 @@ namespace Kivancalp.UI.Presentation
             _ui.NewGameButton.onClick.AddListener(OnNewGameClicked);
             _ui.PreviousLayoutButton.onClick.AddListener(OnPreviousLayoutClicked);
             _ui.NextLayoutButton.onClick.AddListener(OnNextLayoutClicked);
-            _ui.SaveButton.onClick.AddListener(OnSaveClicked);
-            _ui.LoadButton.onClick.AddListener(OnLoadClicked);
 
             UpdateStats(_session.GetStats());
             _ui.LayoutText.text = LayoutPrefix + _session.CurrentLayout.DisplayName;
@@ -50,8 +47,6 @@ namespace Kivancalp.UI.Presentation
             _ui.NewGameButton.onClick.RemoveListener(OnNewGameClicked);
             _ui.PreviousLayoutButton.onClick.RemoveListener(OnPreviousLayoutClicked);
             _ui.NextLayoutButton.onClick.RemoveListener(OnNextLayoutClicked);
-            _ui.SaveButton.onClick.RemoveListener(OnSaveClicked);
-            _ui.LoadButton.onClick.RemoveListener(OnLoadClicked);
         }
 
         private void OnBoardChanged(BoardChangedEvent boardChanged)
@@ -84,18 +79,6 @@ namespace Kivancalp.UI.Presentation
         private void OnNextLayoutClicked()
         {
             _session.SwitchLayoutByOffset(1);
-        }
-
-        private void OnSaveClicked()
-        {
-            _session.ForceSave();
-            _ui.StatusText.text = "Saved";
-        }
-
-        private void OnLoadClicked()
-        {
-            _session.ReloadFromSave();
-            _ui.StatusText.text = "Loaded";
         }
 
         private void UpdateStats(GameStats stats)

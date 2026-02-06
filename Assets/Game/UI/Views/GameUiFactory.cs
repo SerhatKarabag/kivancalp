@@ -47,8 +47,6 @@ namespace Kivancalp.UI.Views
             Button previousLayoutButton = CreateButton("PrevLayoutButton", bottomPanel, uiFont, "Layout -", new Vector2(20f, 20f), new Vector2(200f, 70f));
             Button nextLayoutButton = CreateButton("NextLayoutButton", bottomPanel, uiFont, "Layout +", new Vector2(220f, 20f), new Vector2(400f, 70f));
             Button newGameButton = CreateButton("NewGameButton", bottomPanel, uiFont, "New Game", new Vector2(420f, 20f), new Vector2(640f, 70f));
-            Button saveButton = CreateButton("SaveButton", bottomPanel, uiFont, "Save", new Vector2(660f, 20f), new Vector2(820f, 70f));
-            Button loadButton = CreateButton("LoadButton", bottomPanel, uiFont, "Load", new Vector2(840f, 20f), new Vector2(1000f, 70f));
 
             return new GameUiContext(
                 rootObject,
@@ -62,9 +60,7 @@ namespace Kivancalp.UI.Views
                 statusText,
                 newGameButton,
                 previousLayoutButton,
-                nextLayoutButton,
-                saveButton,
-                loadButton);
+                nextLayoutButton);
         }
 
         private static GameObject CreateUiRoot(Transform parent)

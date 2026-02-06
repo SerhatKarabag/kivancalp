@@ -17,9 +17,7 @@ namespace Kivancalp.UI.Views
             Text statusText,
             Button newGameButton,
             Button previousLayoutButton,
-            Button nextLayoutButton,
-            Button saveButton,
-            Button loadButton)
+            Button nextLayoutButton)
         {
             RootObject = rootObject;
             UiFont = uiFont;
@@ -33,8 +31,6 @@ namespace Kivancalp.UI.Views
             NewGameButton = newGameButton;
             PreviousLayoutButton = previousLayoutButton;
             NextLayoutButton = nextLayoutButton;
-            SaveButton = saveButton;
-            LoadButton = loadButton;
         }
 
         public GameObject RootObject { get; }
@@ -60,9 +56,5 @@ namespace Kivancalp.UI.Views
         public Button PreviousLayoutButton { get; }
 
         public Button NextLayoutButton { get; }
-
-        public Button SaveButton { get; }
-
-        public Button LoadButton { get; }
     }
 }

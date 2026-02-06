@@ -20,6 +20,7 @@ namespace Kivancalp.UI.Bootstrap
         private IDiContainer _rootContainer;
         private IDiContainer _sceneScope;
         private TickDriver _tickDriver;
+        private IGameSession _session;
 
         private void Awake()
         {
@@ -29,8 +30,30 @@ namespace Kivancalp.UI.Bootstrap
 
         private void OnDestroy()
         {
+            FlushSessionSave();
             _sceneScope?.Dispose();
             _rootContainer?.Dispose();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus)
+            {
+                FlushSessionSave();
+            }
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                FlushSessionSave();
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            FlushSessionSave();
         }
 
         private void BuildComposition()
@@ -50,21 +73,31 @@ namespace Kivancalp.UI.Bootstrap
 
             _sceneScope = _rootContainer.CreateScope();
 
-            IGameSession session = _sceneScope.Resolve<IGameSession>();
+            _session = _sceneScope.Resolve<IGameSession>();
             CardFlipAnimationSystem flipAnimationSystem = _sceneScope.Resolve<CardFlipAnimationSystem>();
             BoardPresenter boardPresenter = _sceneScope.Resolve<BoardPresenter>();
             HudPresenter hudPresenter = _sceneScope.Resolve<HudPresenter>();
 
-            var presenter = new GamePresenter(session, boardPresenter, hudPresenter);
+            var presenter = new GamePresenter(_session, boardPresenter, hudPresenter);
             presenter.Initialize();
 
             _tickDriver = gameObject.AddComponent<TickDriver>();
             _tickDriver.Initialize(new ITickable[]
             {
-                session,
+                _session,
                 flipAnimationSystem,
                 boardPresenter,
             });
+        }
+
+        private void FlushSessionSave()
+        {
+            if (_session == null)
+            {
+                return;
+            }
+
+            _session.ForceSave();
         }
 
         private static void RegisterServices(IDiContainer container)
