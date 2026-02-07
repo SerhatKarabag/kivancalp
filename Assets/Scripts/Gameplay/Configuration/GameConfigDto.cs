@@ -19,9 +19,9 @@ namespace Kivancalp.Gameplay.Configuration
         [Serializable]
         public sealed class ScoreDto
         {
-            public int matchScore;
-            public int mismatchPenalty;
-            public int comboBonusStep;
+            public int matchScore = 100;
+            public int mismatchPenalty = 25;
+            public int comboBonusStep = 15;
         }
 
         public int defaultLayoutId;

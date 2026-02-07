@@ -1,4 +1,4 @@
-using Kivancalp.Core.Lifecycle;
+using Kivancalp.Core;
 using Kivancalp.UI.Views;
 using UnityEngine;
 
@@ -96,6 +96,24 @@ namespace Kivancalp.UI.Presentation
 
                 _activeAnimations[index] = animation;
             }
+        }
+
+        public void Cancel(CardView view)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            int animationIndex = IndexOf(view);
+
+            if (animationIndex < 0)
+            {
+                return;
+            }
+
+            view.SetHorizontalScale(1f);
+            RemoveAt(animationIndex);
         }
 
         private int IndexOf(CardView view)

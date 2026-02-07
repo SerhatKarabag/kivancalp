@@ -1,8 +1,7 @@
 using System;
-using Kivancalp.Core.Lifecycle;
-using Kivancalp.Gameplay.Application;
-using Kivancalp.Gameplay.Contracts;
-using Kivancalp.Gameplay.Domain;
+using Kivancalp.Core;
+using Kivancalp.Gameplay.Interfaces;
+using Kivancalp.Gameplay.Models;
 using Kivancalp.UI.Views;
 using UnityEngine;
 
@@ -11,7 +10,7 @@ namespace Kivancalp.UI.Presentation
     public sealed class BoardPresenter : ITickable, IDisposable
     {
         private readonly IGameSession _session;
-        private readonly GameUiContext _ui;
+        private readonly GameUiRef _ui;
         private readonly CardViewPool _pool;
         private readonly CardFlipAnimationSystem _flipAnimationSystem;
         private readonly CardView[] _activeViews;
@@ -20,7 +19,7 @@ namespace Kivancalp.UI.Presentation
         private bool _layoutDirty;
         private Vector2 _lastBoardSize;
 
-        public BoardPresenter(IGameSession session, GameUiContext ui, CardViewPool pool, CardFlipAnimationSystem flipAnimationSystem)
+        public BoardPresenter(IGameSession session, GameUiRef ui, CardViewPool pool, CardFlipAnimationSystem flipAnimationSystem)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -129,6 +128,7 @@ namespace Kivancalp.UI.Presentation
 
                 if (view != null)
                 {
+                    _flipAnimationSystem.Cancel(view);
                     _pool.Return(view);
                     _activeViews[cardIndex] = null;
                 }

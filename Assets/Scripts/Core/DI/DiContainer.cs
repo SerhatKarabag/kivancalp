@@ -13,6 +13,7 @@ namespace Kivancalp.Core.DI
         private readonly Dictionary<Type, object> _scopedInstances;
         private readonly List<IDisposable> _scopeDisposables;
         private readonly Stack<Type> _resolutionPath;
+        private readonly Stack<ServiceLifetime> _resolutionLifetimes;
         private readonly bool _isRoot;
         private bool _disposed;
 
@@ -25,6 +26,7 @@ namespace Kivancalp.Core.DI
             _scopedInstances = new Dictionary<Type, object>(32);
             _scopeDisposables = new List<IDisposable>(32);
             _resolutionPath = new Stack<Type>(16);
+            _resolutionLifetimes = new Stack<ServiceLifetime>(16);
             _isRoot = true;
         }
 
@@ -37,6 +39,7 @@ namespace Kivancalp.Core.DI
             _scopedInstances = new Dictionary<Type, object>(32);
             _scopeDisposables = new List<IDisposable>(32);
             _resolutionPath = new Stack<Type>(16);
+            _resolutionLifetimes = new Stack<ServiceLifetime>(16);
             _isRoot = false;
         }
 
@@ -156,6 +159,11 @@ namespace Kivancalp.Core.DI
                     return singleton;
 
                 case ServiceLifetime.Scoped:
+                    if (IsSingletonResolutionActive())
+                    {
+                        throw new InvalidOperationException("Cannot resolve scoped service while building a singleton dependency graph: " + serviceType.FullName);
+                    }
+
                     if (!_scopedInstances.TryGetValue(serviceType, out object scoped))
                     {
                         scoped = CreateInstance(serviceType, descriptor);
@@ -174,6 +182,7 @@ namespace Kivancalp.Core.DI
 
         public bool TryResolve<T>(out T service)
         {
+            ThrowIfDisposed();
             var serviceType = typeof(T);
 
             if (serviceType == typeof(IResolver) || serviceType == typeof(IDiContainer))
@@ -188,8 +197,16 @@ namespace Kivancalp.Core.DI
                 return false;
             }
 
-            service = Resolve<T>();
-            return true;
+            try
+            {
+                service = Resolve<T>();
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                service = default;
+                return false;
+            }
         }
 
         public void Dispose()
@@ -243,6 +260,7 @@ namespace Kivancalp.Core.DI
             }
 
             _resolutionPath.Push(serviceType);
+            _resolutionLifetimes.Push(descriptor.Lifetime);
 
             try
             {
@@ -269,8 +287,22 @@ namespace Kivancalp.Core.DI
             }
             finally
             {
+                _resolutionLifetimes.Pop();
                 _resolutionPath.Pop();
             }
+        }
+
+        private bool IsSingletonResolutionActive()
+        {
+            foreach (ServiceLifetime lifetime in _resolutionLifetimes)
+            {
+                if (lifetime == ServiceLifetime.Singleton)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void DisposeDisposables(List<IDisposable> disposables)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Kivancalp.Gameplay.Configuration
 {
@@ -22,6 +23,7 @@ namespace Kivancalp.Gameplay.Configuration
             }
 
             var layouts = new BoardLayoutConfig[dto.layouts.Length];
+            var layoutIds = new HashSet<int>();
 
             for (int index = 0; index < dto.layouts.Length; index += 1)
             {
@@ -36,13 +38,38 @@ namespace Kivancalp.Gameplay.Configuration
                     ? sourceLayout.rows + "x" + sourceLayout.columns
                     : sourceLayout.name;
 
+                if (sourceLayout.id < 0)
+                {
+                    throw new InvalidOperationException("Layout id cannot be negative. id=" + sourceLayout.id);
+                }
+
+                if (!layoutIds.Add(sourceLayout.id))
+                {
+                    throw new InvalidOperationException("Layout ids must be unique. Duplicate id=" + sourceLayout.id);
+                }
+
+                if (sourceLayout.rows <= 0)
+                {
+                    throw new InvalidOperationException("Layout rows must be greater than zero. id=" + sourceLayout.id + " rows=" + sourceLayout.rows);
+                }
+
+                if (sourceLayout.columns <= 0)
+                {
+                    throw new InvalidOperationException("Layout columns must be greater than zero. id=" + sourceLayout.id + " columns=" + sourceLayout.columns);
+                }
+
+                if ((sourceLayout.rows * sourceLayout.columns) % 2 != 0)
+                {
+                    throw new InvalidOperationException("Layout card count must be even for pair matching. id=" + sourceLayout.id + " rows=" + sourceLayout.rows + " columns=" + sourceLayout.columns);
+                }
+
                 var layout = new BoardLayoutConfig(
                     new LayoutId(sourceLayout.id),
                     displayName,
                     sourceLayout.rows,
                     sourceLayout.columns,
-                    sourceLayout.spacing,
-                    sourceLayout.padding);
+                    Math.Max(0f, sourceLayout.spacing),
+                    Math.Max(0f, sourceLayout.padding));
 
                 if (!layout.IsValid)
                 {
@@ -52,15 +79,60 @@ namespace Kivancalp.Gameplay.Configuration
                 layouts[index] = layout;
             }
 
-            var scoring = new ScoringConfig(dto.score.matchScore, dto.score.mismatchPenalty, dto.score.comboBonusStep);
-            float flipDurationSeconds = Math.Max(0f, dto.flipDurationSeconds);
-            float compareDelaySeconds = Math.Max(0f, dto.compareDelaySeconds);
-            float mismatchRevealSeconds = Math.Max(0f, dto.mismatchRevealSeconds);
-            float saveDebounceSeconds = Math.Max(0f, dto.saveDebounceSeconds);
+            var defaultLayoutId = new LayoutId(dto.defaultLayoutId);
+
+            if (!layoutIds.Contains(defaultLayoutId.Value))
+            {
+                throw new InvalidOperationException("Default layout id is not present in layout list. id=" + defaultLayoutId.Value);
+            }
+
+            if (dto.score.matchScore < 0)
+            {
+                throw new InvalidOperationException("matchScore cannot be negative. value=" + dto.score.matchScore);
+            }
+
+            if (dto.score.mismatchPenalty < 0)
+            {
+                throw new InvalidOperationException("mismatchPenalty cannot be negative. value=" + dto.score.mismatchPenalty);
+            }
+
+            if (dto.score.comboBonusStep < 0)
+            {
+                throw new InvalidOperationException("comboBonusStep cannot be negative. value=" + dto.score.comboBonusStep);
+            }
+
+            if (dto.flipDurationSeconds < 0f)
+            {
+                throw new InvalidOperationException("flipDurationSeconds cannot be negative. value=" + dto.flipDurationSeconds);
+            }
+
+            if (dto.compareDelaySeconds < 0f)
+            {
+                throw new InvalidOperationException("compareDelaySeconds cannot be negative. value=" + dto.compareDelaySeconds);
+            }
+
+            if (dto.mismatchRevealSeconds < 0f)
+            {
+                throw new InvalidOperationException("mismatchRevealSeconds cannot be negative. value=" + dto.mismatchRevealSeconds);
+            }
+
+            if (dto.saveDebounceSeconds < 0f)
+            {
+                throw new InvalidOperationException("saveDebounceSeconds cannot be negative. value=" + dto.saveDebounceSeconds);
+            }
+
+            var scoring = new ScoringConfig(
+                dto.score.matchScore,
+                dto.score.mismatchPenalty,
+                dto.score.comboBonusStep);
+            float flipDurationSeconds = dto.flipDurationSeconds;
+            float compareDelaySeconds = dto.compareDelaySeconds;
+            float mismatchRevealSeconds = dto.mismatchRevealSeconds;
+            float saveDebounceSeconds = dto.saveDebounceSeconds;
 
             return new GameConfig(
                 layouts,
-                new LayoutId(dto.defaultLayoutId),
+                defaultLayoutId,
                 scoring,
                 flipDurationSeconds,
                 compareDelaySeconds,

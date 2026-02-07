@@ -4,7 +4,6 @@
   "references": [
     "Kivancalp.Core",
     "Kivancalp.Gameplay",
-    "Kivancalp.Infrastructure",
     "Kivancalp.UI"
   ],
   "includePlatforms": [],

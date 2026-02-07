@@ -6,7 +6,7 @@ namespace Kivancalp.UI.Views
     [CreateAssetMenu(menuName = "Kivancalp/UI Theme Config", fileName = "ui_theme_config")]
     public sealed class UiThemeConfig : ScriptableObject
     {
-        private const string ThemeResourcePath = "ui_theme_config";
+        private const string ThemeResourcePath = "Configs/ui_theme_config";
 
         [Serializable]
         public sealed class Palette

@@ -1,51 +1,28 @@
 using System;
-using Kivancalp.Core.Logging;
+using Kivancalp.Core;
 using Kivancalp.Gameplay.Configuration;
-using Kivancalp.Gameplay.Contracts;
-using Kivancalp.Gameplay.Domain;
+using Kivancalp.Gameplay.Interfaces;
+using Kivancalp.Gameplay.Models;
 
 namespace Kivancalp.Gameplay.Application
 {
-    public sealed class GameSession : IGameSession
+    public sealed class GameSession : IGameSession, IGameSessionLifecycle
     {
-        private struct PendingPair
-        {
-            public int First;
-            public int Second;
-            public float ExecuteAt;
-        }
-
         private readonly IRandomProvider _randomProvider;
         private readonly IGamePersistence _persistence;
         private readonly IGameAudio _audio;
         private readonly IGameLogger _logger;
-        private readonly int[] _faceIds;
-        private readonly CardState[] _cardStates;
-        private readonly PendingPair[] _compareQueue;
-        private readonly PendingPair[] _hideQueue;
-
-        private int _compareQueueHead;
-        private int _compareQueueTail;
-        private int _compareQueueCount;
-        private int _hideQueueHead;
-        private int _hideQueueTail;
-        private int _hideQueueCount;
+        private readonly CardBoard _board;
+        private readonly LayoutNavigator _layoutNavigator;
+        private readonly GameSessionScoring _scoring;
+        private readonly GameSessionSaveScheduler _saveScheduler;
+        private readonly PairMatchingProcessor _pairProcessor;
+        private readonly Func<bool> _persistNowCallback;
+        private readonly PersistenceBuffers _persistenceBuffers;
 
         private int _pendingPairFirstCardIndex = -1;
-        private int _cardCount;
-        private int _currentLayoutIndex;
-        private BoardLayoutConfig _currentLayout;
-
-        private int _score;
-        private int _turns;
-        private int _matches;
-        private int _combo;
-        private int _totalPairs;
-
         private float _elapsedTime;
-        private float _saveTimer;
-        private bool _dirty;
-        private bool _completed;
+        private bool _audioDisabled;
 
         public GameSession(GameConfig config, IRandomProvider randomProvider, IGamePersistence persistence, IGameAudio audio, IGameLogger logger)
         {
@@ -56,19 +33,21 @@ namespace Kivancalp.Gameplay.Application
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             int maxCardCount = Config.GetMaxCardCount();
-            _faceIds = new int[maxCardCount];
-            _cardStates = new CardState[maxCardCount];
-            _compareQueue = new PendingPair[maxCardCount];
-            _hideQueue = new PendingPair[maxCardCount];
 
-            _currentLayoutIndex = Config.FindLayoutIndex(Config.DefaultLayoutId);
+            _board = new CardBoard(maxCardCount);
+            _layoutNavigator = new LayoutNavigator(Config);
+            _scoring = new GameSessionScoring(Config.Scoring);
+            _saveScheduler = new GameSessionSaveScheduler(Config.SaveDebounceSeconds);
+            _persistNowCallback = PersistNow;
+            _persistenceBuffers = new PersistenceBuffers(maxCardCount);
 
-            if (_currentLayoutIndex < 0)
-            {
-                _currentLayoutIndex = 0;
-            }
-
-            _currentLayout = Config.GetLayoutByIndex(_currentLayoutIndex);
+            _pairProcessor = new PairMatchingProcessor(
+                maxCardCount,
+                Config.MismatchRevealSeconds,
+                _board.GetState,
+                _board.GetFaceId,
+                OnPairResolved,
+                OnCardHidden);
         }
 
         public event Action<BoardChangedEvent> BoardChanged;
@@ -83,11 +62,11 @@ namespace Kivancalp.Gameplay.Application
 
         public GameConfig Config { get; }
 
-        public BoardLayoutConfig CurrentLayout => _currentLayout;
+        public BoardLayoutConfig CurrentLayout => _layoutNavigator.CurrentLayout;
 
-        public int CurrentLayoutIndex => _currentLayoutIndex;
+        public int CurrentLayoutIndex => _layoutNavigator.CurrentLayoutIndex;
 
-        public int CardCount => _cardCount;
+        public int CardCount => _board.CardCount;
 
         public void Start()
         {
@@ -107,43 +86,26 @@ namespace Kivancalp.Gameplay.Application
             PublishBoardChanged();
             PublishStatsChanged();
 
-            if (_completed)
+            if (_scoring.IsCompleted)
             {
-                GameCompleted?.Invoke(new GameCompletedEvent(GetStats()));
+                RaiseEvent(GameCompleted, new GameCompletedEvent(_scoring.GetStats()));
             }
         }
 
         public void StartNewGame(LayoutId layoutId)
         {
-            int layoutIndex = Config.FindLayoutIndex(layoutId);
+            int layoutIndex = _layoutNavigator.ResolveLayoutIndex(layoutId);
 
-            if (layoutIndex < 0)
-            {
-                layoutIndex = Config.FindLayoutIndex(Config.DefaultLayoutId);
+            _randomProvider.Reseed();
+            _layoutNavigator.SetLayout(layoutIndex);
+            _board.Reset(_layoutNavigator.CurrentLayout.CardCount, _randomProvider);
 
-                if (layoutIndex < 0)
-                {
-                    layoutIndex = 0;
-                }
-            }
-
-            ApplyLayout(layoutIndex);
-            GenerateShuffledDeck();
-
-            for (int cardIndex = 0; cardIndex < _cardCount; cardIndex += 1)
-            {
-                _cardStates[cardIndex] = CardState.FaceDown;
-            }
-
-            _score = 0;
-            _turns = 0;
-            _matches = 0;
-            _combo = 0;
-            _completed = false;
+            _scoring.Reset(_layoutNavigator.CurrentLayout.PairCount);
             _pendingPairFirstCardIndex = -1;
+            _elapsedTime = 0f;
 
-            ClearQueue(ref _compareQueueHead, ref _compareQueueTail, ref _compareQueueCount);
-            ClearQueue(ref _hideQueueHead, ref _hideQueueTail, ref _hideQueueCount);
+            _pairProcessor.Clear();
+            _saveScheduler.Reset();
 
             PublishBoardChanged();
             PublishStatsChanged();
@@ -154,43 +116,36 @@ namespace Kivancalp.Gameplay.Application
 
         public void SwitchLayoutByOffset(int offset)
         {
-            int layoutCount = Config.LayoutCount;
+            int targetIndex = _layoutNavigator.CalculateOffsetIndex(offset);
 
-            if (layoutCount <= 0)
+            if (targetIndex == _layoutNavigator.CurrentLayoutIndex && Config.LayoutCount > 0)
             {
                 return;
             }
 
-            int targetLayoutIndex = _currentLayoutIndex + offset;
-
-            while (targetLayoutIndex < 0)
-            {
-                targetLayoutIndex += layoutCount;
-            }
-
-            while (targetLayoutIndex >= layoutCount)
-            {
-                targetLayoutIndex -= layoutCount;
-            }
-
-            StartNewGame(Config.GetLayoutByIndex(targetLayoutIndex).Id);
+            StartNewGame(Config.GetLayoutByIndex(targetIndex).Id);
         }
 
         public bool TryFlipCard(int cardIndex)
         {
-            if (_completed || cardIndex < 0 || cardIndex >= _cardCount)
+            if (_scoring.IsCompleted)
             {
                 return false;
             }
 
-            if (_cardStates[cardIndex] != CardState.FaceDown)
+            if (cardIndex < 0 || cardIndex >= _board.CardCount)
             {
                 return false;
             }
 
-            _cardStates[cardIndex] = CardState.FaceUp;
-            CardStateChanged?.Invoke(new CardStateChangedEvent(cardIndex, CardState.FaceUp, CardStateChangeReason.PlayerFlip));
-            _audio.Play(SoundEffectType.Flip);
+            if (_board.GetState(cardIndex) != CardState.FaceDown)
+            {
+                return false;
+            }
+
+            _board.SetState(cardIndex, CardState.FaceUp);
+            RaiseEvent(CardStateChanged, new CardStateChangedEvent(cardIndex, CardState.FaceUp, CardStateChangeReason.PlayerFlip));
+            PlayAudio(SoundEffectType.Flip);
 
             if (_pendingPairFirstCardIndex < 0)
             {
@@ -198,17 +153,10 @@ namespace Kivancalp.Gameplay.Application
             }
             else
             {
-                Enqueue(
-                    _compareQueue,
-                    ref _compareQueueHead,
-                    ref _compareQueueTail,
-                    ref _compareQueueCount,
-                    new PendingPair
-                    {
-                        First = _pendingPairFirstCardIndex,
-                        Second = cardIndex,
-                        ExecuteAt = _elapsedTime + Config.CompareDelaySeconds,
-                    });
+                _pairProcessor.Enqueue(
+                    _pendingPairFirstCardIndex,
+                    cardIndex,
+                    _elapsedTime + Config.CompareDelaySeconds);
 
                 _pendingPairFirstCardIndex = -1;
             }
@@ -219,17 +167,12 @@ namespace Kivancalp.Gameplay.Application
 
         public CardSnapshot GetCardSnapshot(int cardIndex)
         {
-            if (cardIndex < 0 || cardIndex >= _cardCount)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cardIndex));
-            }
-
-            return new CardSnapshot(cardIndex, _faceIds[cardIndex], _cardStates[cardIndex]);
+            return _board.GetSnapshot(cardIndex);
         }
 
         public GameStats GetStats()
         {
-            return new GameStats(_score, _turns, _matches, _combo, _totalPairs);
+            return _scoring.GetStats();
         }
 
         public void Tick(float deltaTime)
@@ -241,27 +184,13 @@ namespace Kivancalp.Gameplay.Application
 
             _elapsedTime += deltaTime;
 
-            ProcessCompareQueue();
-            ProcessHideQueue();
-
-            if (_dirty)
-            {
-                _saveTimer += deltaTime;
-
-                if (_saveTimer >= Config.SaveDebounceSeconds)
-                {
-                    PersistNow();
-                    _dirty = false;
-                    _saveTimer = 0f;
-                }
-            }
+            _pairProcessor.Tick(_elapsedTime);
+            _saveScheduler.Tick(deltaTime, _persistNowCallback);
         }
 
         public void ForceSave()
         {
-            PersistNow();
-            _dirty = false;
-            _saveTimer = 0f;
+            _saveScheduler.ForceSave(_persistNowCallback);
         }
 
         public void Dispose()
@@ -276,306 +205,165 @@ namespace Kivancalp.Gameplay.Application
             }
         }
 
-        private void ProcessCompareQueue()
+        private void OnPairResolved(PairResult result)
         {
-            while (_compareQueueCount > 0)
+            if (result.IsMatch)
             {
-                PendingPair pair = Peek(_compareQueue, _compareQueueHead);
+                _scoring.RecordMatch();
 
-                if (pair.ExecuteAt > _elapsedTime)
+                _board.SetState(result.First, CardState.Matched);
+                _board.SetState(result.Second, CardState.Matched);
+
+                RaiseEvent(CardStateChanged, new CardStateChangedEvent(result.First, CardState.Matched, CardStateChangeReason.Matched));
+                RaiseEvent(CardStateChanged, new CardStateChangedEvent(result.Second, CardState.Matched, CardStateChangeReason.Matched));
+
+                PlayAudio(SoundEffectType.Match);
+
+                if (_scoring.IsCompleted)
                 {
-                    break;
+                    PlayAudio(SoundEffectType.GameOver);
                 }
-
-                pair = Dequeue(_compareQueue, ref _compareQueueHead, ref _compareQueueTail, ref _compareQueueCount);
-
-                if (_cardStates[pair.First] != CardState.FaceUp || _cardStates[pair.Second] != CardState.FaceUp)
-                {
-                    continue;
-                }
-
-                _turns += 1;
-                bool isMatch = _faceIds[pair.First] == _faceIds[pair.Second];
-
-                if (isMatch)
-                {
-                    _cardStates[pair.First] = CardState.Matched;
-                    _cardStates[pair.Second] = CardState.Matched;
-                    _matches += 1;
-                    _combo += 1;
-                    _score += Config.Scoring.MatchScore + ((_combo - 1) * Config.Scoring.ComboBonusStep);
-
-                    CardStateChanged?.Invoke(new CardStateChangedEvent(pair.First, CardState.Matched, CardStateChangeReason.Matched));
-                    CardStateChanged?.Invoke(new CardStateChangedEvent(pair.Second, CardState.Matched, CardStateChangeReason.Matched));
-
-                    _audio.Play(SoundEffectType.Match);
-
-                    if (_matches >= _totalPairs)
-                    {
-                        _completed = true;
-                        _audio.Play(SoundEffectType.GameOver);
-                    }
-                }
-                else
-                {
-                    _combo = 0;
-                    _score -= Config.Scoring.MismatchPenalty;
-
-                    if (_score < 0)
-                    {
-                        _score = 0;
-                    }
-
-                    Enqueue(
-                        _hideQueue,
-                        ref _hideQueueHead,
-                        ref _hideQueueTail,
-                        ref _hideQueueCount,
-                        new PendingPair
-                        {
-                            First = pair.First,
-                            Second = pair.Second,
-                            ExecuteAt = _elapsedTime + Config.MismatchRevealSeconds,
-                        });
-
-                    _audio.Play(SoundEffectType.Mismatch);
-                }
-
-                PairResolved?.Invoke(new PairResolvedEvent(pair.First, pair.Second, isMatch));
-                PublishStatsChanged();
-
-                if (_completed)
-                {
-                    GameCompleted?.Invoke(new GameCompletedEvent(GetStats()));
-                }
-
-                MarkDirty();
             }
-        }
-
-        private void ProcessHideQueue()
-        {
-            while (_hideQueueCount > 0)
+            else
             {
-                PendingPair pair = Peek(_hideQueue, _hideQueueHead);
-
-                if (pair.ExecuteAt > _elapsedTime)
-                {
-                    break;
-                }
-
-                pair = Dequeue(_hideQueue, ref _hideQueueHead, ref _hideQueueTail, ref _hideQueueCount);
-
-                if (_cardStates[pair.First] == CardState.FaceUp)
-                {
-                    _cardStates[pair.First] = CardState.FaceDown;
-                    CardStateChanged?.Invoke(new CardStateChangedEvent(pair.First, CardState.FaceDown, CardStateChangeReason.AutoHide));
-                }
-
-                if (_cardStates[pair.Second] == CardState.FaceUp)
-                {
-                    _cardStates[pair.Second] = CardState.FaceDown;
-                    CardStateChanged?.Invoke(new CardStateChangedEvent(pair.Second, CardState.FaceDown, CardStateChangeReason.AutoHide));
-                }
-
-                MarkDirty();
-            }
-        }
-
-        private void GenerateShuffledDeck()
-        {
-            int faceId = 0;
-
-            for (int cardIndex = 0; cardIndex < _cardCount; cardIndex += 2)
-            {
-                _faceIds[cardIndex] = faceId;
-                _faceIds[cardIndex + 1] = faceId;
-                faceId += 1;
+                _scoring.RecordMismatch();
+                PlayAudio(SoundEffectType.Mismatch);
             }
 
-            _randomProvider.Shuffle(_faceIds, _cardCount);
+            RaiseEvent(PairResolved, new PairResolvedEvent(result.First, result.Second, result.IsMatch));
+            PublishStatsChanged();
+
+            if (_scoring.IsCompleted)
+            {
+                RaiseEvent(GameCompleted, new GameCompletedEvent(_scoring.GetStats()));
+            }
+
+            MarkDirty();
         }
 
-        private void ApplyLayout(int layoutIndex)
+        private void OnCardHidden(int cardIndex)
         {
-            _currentLayoutIndex = layoutIndex;
-            _currentLayout = Config.GetLayoutByIndex(layoutIndex);
-            _cardCount = _currentLayout.CardCount;
-            _totalPairs = _currentLayout.PairCount;
-            _elapsedTime = 0f;
-            _saveTimer = 0f;
+            _board.SetState(cardIndex, CardState.FaceDown);
+            RaiseEvent(CardStateChanged, new CardStateChangedEvent(cardIndex, CardState.FaceDown, CardStateChangeReason.AutoHide));
+            MarkDirty();
         }
 
         private bool TryRestore(PersistedGameState persistedState)
         {
-            if (persistedState == null || persistedState.version != PersistedGameState.CurrentVersion)
+            if (!GameSessionPersistenceMapper.TryMapFromPersisted(Config, persistedState, out GameSessionPersistenceMapper.RestoredState restoredState))
             {
                 return false;
             }
 
-            if (persistedState.faceIds == null || persistedState.cardStates == null)
-            {
-                return false;
-            }
+            _layoutNavigator.SetLayout(restoredState.LayoutIndex);
+            _board.Restore(restoredState.FaceIds, restoredState.CardStates, _layoutNavigator.CurrentLayout.CardCount);
 
-            int layoutIndex = Config.FindLayoutIndex(new LayoutId(persistedState.layoutId));
+            _scoring.Restore(
+                restoredState.Score,
+                restoredState.Turns,
+                restoredState.Matches,
+                restoredState.Combo,
+                _layoutNavigator.CurrentLayout.PairCount,
+                restoredState.IsCompleted);
 
-            if (layoutIndex < 0)
-            {
-                return false;
-            }
-
-            ApplyLayout(layoutIndex);
-
-            if (persistedState.faceIds.Length != _cardCount || persistedState.cardStates.Length != _cardCount)
-            {
-                return false;
-            }
-
-            int matchedCardCount = 0;
-
-            for (int cardIndex = 0; cardIndex < _cardCount; cardIndex += 1)
-            {
-                _faceIds[cardIndex] = persistedState.faceIds[cardIndex];
-                CardState state = ToCardState(persistedState.cardStates[cardIndex]);
-
-                if (state == CardState.FaceUp)
-                {
-                    state = CardState.FaceDown;
-                }
-
-                _cardStates[cardIndex] = state;
-
-                if (state == CardState.Matched)
-                {
-                    matchedCardCount += 1;
-                }
-            }
-
-            _matches = matchedCardCount / 2;
-            _turns = persistedState.turns < 0 ? 0 : persistedState.turns;
-            _score = persistedState.score < 0 ? 0 : persistedState.score;
-            _combo = persistedState.combo < 0 ? 0 : persistedState.combo;
-            _completed = _matches >= _totalPairs;
             _pendingPairFirstCardIndex = -1;
-
-            ClearQueue(ref _compareQueueHead, ref _compareQueueTail, ref _compareQueueCount);
-            ClearQueue(ref _hideQueueHead, ref _hideQueueTail, ref _hideQueueCount);
-
-            _dirty = false;
             _elapsedTime = 0f;
-            _saveTimer = 0f;
+
+            _pairProcessor.Clear();
+            _saveScheduler.Reset();
 
             return true;
         }
 
-        private void PersistNow()
+        private bool PersistNow()
         {
-            var persistedState = new PersistedGameState
-            {
-                version = PersistedGameState.CurrentVersion,
-                layoutId = _currentLayout.Id.Value,
-                score = _score,
-                turns = _turns,
-                matches = _matches,
-                combo = _combo,
-                faceIds = new int[_cardCount],
-                cardStates = new byte[_cardCount],
-            };
+            int cardCount = _board.CardCount;
+            _board.CopyStateTo(_persistenceBuffers.FaceIds, _persistenceBuffers.CardStates, cardCount);
 
-            for (int cardIndex = 0; cardIndex < _cardCount; cardIndex += 1)
+            PersistedGameState persistedState = GameSessionPersistenceMapper.WritePersistedState(
+                _persistenceBuffers.CachedState,
+                _layoutNavigator.CurrentLayout.Id,
+                _scoring.Score,
+                _scoring.Turns,
+                _scoring.Matches,
+                _scoring.Combo,
+                _persistenceBuffers.FaceIds,
+                _persistenceBuffers.CardStates,
+                cardCount);
+
+            try
             {
-                persistedState.faceIds[cardIndex] = _faceIds[cardIndex];
-                persistedState.cardStates[cardIndex] = (byte)_cardStates[cardIndex];
+                return _persistence.Save(persistedState);
             }
-
-            _persistence.Save(persistedState);
+            catch (Exception exception)
+            {
+                _logger.Error("Unexpected exception while persisting game state.", exception);
+                return false;
+            }
         }
 
         private void PublishBoardChanged()
         {
-            BoardChanged?.Invoke(new BoardChangedEvent(_currentLayout, _currentLayoutIndex, _cardCount));
+            RaiseEvent(BoardChanged, new BoardChangedEvent(_layoutNavigator.CurrentLayout, _layoutNavigator.CurrentLayoutIndex, _board.CardCount));
         }
 
         private void PublishStatsChanged()
         {
-            StatsChanged?.Invoke(new GameStatsChangedEvent(GetStats()));
+            RaiseEvent(StatsChanged, new GameStatsChangedEvent(_scoring.GetStats()));
         }
 
         private void MarkDirty()
         {
-            _dirty = true;
+            _saveScheduler.MarkDirty(_persistNowCallback);
+        }
 
-            if (Config.SaveDebounceSeconds <= 0f)
+        private void PlayAudio(SoundEffectType effectType)
+        {
+            if (_audioDisabled)
             {
-                PersistNow();
-                _dirty = false;
-                _saveTimer = 0f;
+                return;
+            }
+
+            try
+            {
+                _audio.Play(effectType);
+            }
+            catch (Exception exception)
+            {
+                _audioDisabled = true;
+                _logger.Error("Audio playback failed. Audio disabled for this session.", exception);
             }
         }
 
-        private static CardState ToCardState(byte rawState)
+        private void RaiseEvent<T>(Action<T> handler, T args)
         {
-            if (rawState == (byte)CardState.FaceDown)
+            if (handler == null)
             {
-                return CardState.FaceDown;
+                return;
             }
 
-            if (rawState == (byte)CardState.FaceUp)
+            try
             {
-                return CardState.FaceUp;
+                handler(args);
             }
-
-            if (rawState == (byte)CardState.Matched)
+            catch (Exception exception)
             {
-                return CardState.Matched;
+                _logger.Error("Event subscriber threw an exception.", exception);
             }
-
-            return CardState.FaceDown;
         }
 
-        private static void Enqueue(PendingPair[] queue, ref int head, ref int tail, ref int count, PendingPair value)
+        private sealed class PersistenceBuffers
         {
-            if (count >= queue.Length)
+            public readonly int[] FaceIds;
+            public readonly CardState[] CardStates;
+            public readonly PersistedGameState CachedState;
+
+            public PersistenceBuffers(int maxCardCount)
             {
-                throw new InvalidOperationException("Queue capacity exceeded.");
+                FaceIds = new int[maxCardCount];
+                CardStates = new CardState[maxCardCount];
+                CachedState = new PersistedGameState();
             }
-
-            queue[tail] = value;
-            tail += 1;
-
-            if (tail == queue.Length)
-            {
-                tail = 0;
-            }
-
-            count += 1;
-        }
-
-        private static PendingPair Dequeue(PendingPair[] queue, ref int head, ref int tail, ref int count)
-        {
-            PendingPair value = queue[head];
-            head += 1;
-
-            if (head == queue.Length)
-            {
-                head = 0;
-            }
-
-            count -= 1;
-            return value;
-        }
-
-        private static PendingPair Peek(PendingPair[] queue, int head)
-        {
-            return queue[head];
-        }
-
-        private static void ClearQueue(ref int head, ref int tail, ref int count)
-        {
-            head = 0;
-            tail = 0;
-            count = 0;
         }
     }
 }

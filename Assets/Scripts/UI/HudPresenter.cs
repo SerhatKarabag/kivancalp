@@ -1,7 +1,7 @@
 using System;
-using Kivancalp.Gameplay.Application;
-using Kivancalp.Gameplay.Contracts;
-using Kivancalp.Gameplay.Domain;
+using System.Text;
+using Kivancalp.Gameplay.Interfaces;
+using Kivancalp.Gameplay.Models;
 using Kivancalp.UI.Views;
 
 namespace Kivancalp.UI.Presentation
@@ -9,10 +9,11 @@ namespace Kivancalp.UI.Presentation
     public sealed class HudPresenter : IDisposable
     {
         private readonly IGameSession _session;
-        private readonly GameUiContext _ui;
+        private readonly GameUiRef _ui;
         private readonly UiThemeConfig _theme;
+        private readonly StringBuilder _sb = new StringBuilder(32);
 
-        public HudPresenter(IGameSession session, GameUiContext ui, UiThemeConfig theme)
+        public HudPresenter(IGameSession session, GameUiRef ui, UiThemeConfig theme)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -31,7 +32,9 @@ namespace Kivancalp.UI.Presentation
             _ui.NextLayoutButton.onClick.AddListener(OnNextLayoutClicked);
 
             UpdateStats(_session.GetStats());
-            _ui.LayoutText.text = _theme.hudLabels.layoutPrefix + _session.CurrentLayout.DisplayName;
+
+            _sb.Clear().Append(_theme.hudLabels.layoutPrefix).Append(_session.CurrentLayout.DisplayName);
+            _ui.LayoutText.text = _sb.ToString();
             _ui.StatusText.text = string.Empty;
         }
 
@@ -48,7 +51,8 @@ namespace Kivancalp.UI.Presentation
 
         private void OnBoardChanged(BoardChangedEvent boardChanged)
         {
-            _ui.LayoutText.text = _theme.hudLabels.layoutPrefix + boardChanged.Layout.DisplayName;
+            _sb.Clear().Append(_theme.hudLabels.layoutPrefix).Append(boardChanged.Layout.DisplayName);
+            _ui.LayoutText.text = _sb.ToString();
             _ui.StatusText.text = string.Empty;
         }
 
@@ -80,10 +84,19 @@ namespace Kivancalp.UI.Presentation
 
         private void UpdateStats(GameStats stats)
         {
-            _ui.ScoreText.text = _theme.hudLabels.scorePrefix + stats.Score;
-            _ui.TurnsText.text = _theme.hudLabels.turnsPrefix + stats.Turns;
-            _ui.MatchesText.text = _theme.hudLabels.matchesPrefix + stats.Matches + "/" + stats.TotalPairs;
-            _ui.ComboText.text = _theme.hudLabels.comboPrefix + stats.Combo;
+            _ui.ScoreText.text = FormatStat(_theme.hudLabels.scorePrefix, stats.Score);
+            _ui.TurnsText.text = FormatStat(_theme.hudLabels.turnsPrefix, stats.Turns);
+
+            _sb.Clear().Append(_theme.hudLabels.matchesPrefix).Append(stats.Matches).Append('/').Append(stats.TotalPairs);
+            _ui.MatchesText.text = _sb.ToString();
+
+            _ui.ComboText.text = FormatStat(_theme.hudLabels.comboPrefix, stats.Combo);
+        }
+
+        private string FormatStat(string prefix, int value)
+        {
+            _sb.Clear().Append(prefix).Append(value);
+            return _sb.ToString();
         }
     }
 }

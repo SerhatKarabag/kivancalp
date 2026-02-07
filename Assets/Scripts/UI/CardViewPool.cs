@@ -8,12 +8,12 @@ namespace Kivancalp.UI.Presentation
     public sealed class CardViewPool : IDisposable
     {
         private readonly RectTransform _parent;
-        private readonly Font _font;
+        private readonly CardView _prefab;
         private readonly UiThemeConfig.CardStyle _cardStyle;
         private readonly Stack<CardView> _available;
         private readonly CardView[] _allViews;
 
-        public CardViewPool(RectTransform parent, Font font, UiThemeConfig.CardStyle cardStyle, int capacity)
+        public CardViewPool(RectTransform parent, CardView prefab, UiThemeConfig.CardStyle cardStyle, int capacity)
         {
             if (capacity <= 0)
             {
@@ -21,7 +21,7 @@ namespace Kivancalp.UI.Presentation
             }
 
             _parent = parent ? parent : throw new ArgumentNullException(nameof(parent));
-            _font = font ? font : throw new ArgumentNullException(nameof(font));
+            _prefab = prefab ? prefab : throw new ArgumentNullException(nameof(prefab));
             _cardStyle = cardStyle ?? throw new ArgumentNullException(nameof(cardStyle));
             _cardStyle.EnsureInitialized();
             _available = new Stack<CardView>(capacity);
@@ -78,17 +78,10 @@ namespace Kivancalp.UI.Presentation
 
         private CardView CreateCardView(int index)
         {
-            var cardObject = new GameObject("CardView_" + index, typeof(RectTransform), typeof(CardView));
-            var cardRect = cardObject.GetComponent<RectTransform>();
-            cardRect.SetParent(_parent, false);
-            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-            cardRect.pivot = new Vector2(0.5f, 0.5f);
-            cardRect.sizeDelta = _cardStyle.baseSize;
-
-            CardView view = cardObject.GetComponent<CardView>();
-            view.Build(_font, _cardStyle);
-            cardObject.SetActive(false);
+            CardView view = UnityEngine.Object.Instantiate(_prefab, _parent);
+            view.gameObject.name = "CardView_" + index;
+            view.Initialize(_cardStyle);
+            view.gameObject.SetActive(false);
             return view;
         }
     }
