@@ -1,5 +1,3 @@
-# kivancalp
-
 ## Run
 
 1. Open the project in Unity `2021.3.45f2`.

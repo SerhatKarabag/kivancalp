@@ -78,11 +78,6 @@ namespace Kivancalp.App
 
             GameUiRef uiRefPrefab = Resources.Load<GameUiRef>(GameUiRootResourcePath);
 
-            if (uiRefPrefab == null)
-            {
-                throw new InvalidOperationException("GameUiRoot prefab not found in Resources. Run 'Kivancalp > Scaffold Prefabs' in the Unity Editor first.");
-            }
-
             GameUiRef uiRef = Instantiate(uiRefPrefab, transform);
 
             AudioSource audioSource = uiRef.gameObject.AddComponent<AudioSource>();
@@ -92,10 +87,6 @@ namespace Kivancalp.App
 
             CardView cardViewPrefab = Resources.Load<CardView>(CardViewResourcePath);
 
-            if (cardViewPrefab == null)
-            {
-                throw new InvalidOperationException("CardView prefab not found in Resources. Run 'Kivancalp > Scaffold Prefabs' in the Unity Editor first.");
-            }
 
             _rootContainer.RegisterInstance(uiThemeConfig);
             _rootContainer.RegisterInstance(uiRef);
